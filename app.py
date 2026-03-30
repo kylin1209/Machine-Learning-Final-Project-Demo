@@ -128,12 +128,19 @@ for g_list in df['genres'].str.split(','):
         
 selected_genres = st.sidebar.multiselect("Require Genres:", sorted(list(all_genres)))
 
+def normalize_genre_tokens(genre_text):
+    if genre_text is None:
+        return set()
+    return {token.strip().lower() for token in str(genre_text).split(',') if token.strip()}
+
 # Apply filters
 mask = (df['price'] >= min_price) & (df['price'] <= max_price)
 if selected_genres:
-    # Game must contain at least one of the selected genres
-    # To require ALL, use all(g in x for g in selected_genres)
-    genre_mask = df['genres'].apply(lambda x: any(g in str(x) for g in selected_genres))
+    # Game must contain at least one exact selected genre token
+    selected_genres_normalized = {genre.strip().lower() for genre in selected_genres}
+    genre_mask = df['genres'].apply(
+        lambda value: bool(normalize_genre_tokens(value).intersection(selected_genres_normalized))
+    )
     mask = mask & genre_mask
 
 filtered_df = df[mask].copy()
