@@ -67,10 +67,22 @@ h1, h2, h3 {
 }
 
 /* Search Bars / Inputs */
-.stTextInput > div > div > input, .stTextArea > div > div > textarea, .stSelectbox > div > div > div {
+.stTextInput > div > div > input, .stTextArea > div > div > textarea, .stSelectbox > div > div > div, .stMultiSelect > div > div > div {
     background-color: rgba(0, 0, 0, 0.4) !important;
     color: #ffffff !important;
     border: 1px solid #1a44c2 !important;
+}
+
+/* Dropdown Options / Popovers */
+div[data-baseweb="popover"] > div, ul[role="listbox"] {
+    background-color: #1b2838 !important;
+}
+li[role="option"] {
+    background-color: #1b2838 !important;
+    color: #ffffff !important;
+}
+li[role="option"]:hover, li[role="option"][aria-selected="true"] {
+    background-color: #1a44c2 !important;
 }
 
 /* Alerts / Success */
