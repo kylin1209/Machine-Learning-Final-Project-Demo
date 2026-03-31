@@ -86,6 +86,53 @@ def load_and_clean_data(limit=10000):
             
     return df
 
+def validate_dataset(df):
+    """
+    Validates dataset after loading for key columns and missing values.
+    Returns a validation report.
+    """
+    report = {
+        'total_rows': len(df),
+        'total_columns': len(df.columns),
+        'missing_values': df.isnull().sum().to_dict(),
+        'key_columns': ['name', 'genres', 'short_description', 'price', 'positive']
+    }
+    
+    # Check if key columns exist and have sufficient data
+    for col in report['key_columns']:
+        if col in df.columns:
+            missing_pct = (df[col].isnull().sum() / len(df)) * 100
+            report[f'{col}_missing_pct'] = missing_pct
+            if missing_pct > 50:
+                print(f"⚠️  Warning: {col} has {missing_pct:.1f}% missing values")
+        else:
+            print(f"❌ Error: Required column '{col}' not found")
+    
+    return report
+
+
+
+def add_derived_metadata(df):
+    """
+    Computes and adds derived metadata fields for richer filtering/analysis.
+    """
+    # Is free?
+    df['is_free'] = df['price'] == 0.0
+    
+    # Release year (already in code, but make it robust)
+    df['release_year'] = pd.to_datetime(df['release_date'], errors='coerce').dt.year.fillna(0).astype(int)
+    
+    # Review sentiment (positive/negative ratio)
+    df['positive_numeric'] = pd.to_numeric(df['positive'], errors='coerce').fillna(0)
+    df['negative_numeric'] = pd.to_numeric(df['negative'], errors='coerce').fillna(0)
+    df['sentiment_ratio'] = df['positive_numeric'] / (df['positive_numeric'] + df['negative_numeric'] + 1)
+    
+    # Price category
+    df['price_category'] = pd.cut(df['price'], bins=[-0.1, 0, 15, 30, 60, 999], 
+                                   labels=['Free', 'Budget', 'Standard', 'Premium', 'Luxury'])
+    
+    return df
+    
 def get_text_fields(df):
     """Returns just the text fields needed for search/embedding."""
     cols = ['name', 'short_description', 'detailed_description', 'genres', 'tags', 'categories']
