@@ -110,32 +110,7 @@ def validate_dataset(df):
     
     return report
 
-def load_and_clean_data(limit=10000, max_retries=3):
-    """
-    Downloads, loads, and cleans the Steam games dataset with error handling.
-    """
-    import time
-    
-    for attempt in range(max_retries):
-        try:
-            st.info(f"Attempt {attempt + 1}: Downloading dataset from HuggingFace...")
-            ds = load_dataset("FronkonGames/steam-games-dataset", split="train")
-            df = ds.to_pandas()
-            st.success("✅ Dataset loaded successfully")
-            break
-        except Exception as e:
-            if attempt < max_retries - 1:
-                st.warning(f"Download failed: {str(e)}. Retrying in 5 seconds...")
-                time.sleep(5)
-            else:
-                st.error(f"❌ Failed to load dataset after {max_retries} attempts: {str(e)}")
-                raise
-    
-    # Validate dataset
-    validation_report = validate_dataset(df)
-    st.write(validation_report)  # Show in UI
-    
-    # ... rest of cleaning logic
+
 
 def add_derived_metadata(df):
     """
