@@ -13,7 +13,7 @@ from clustering import perform_kmeans_clustering
 from utils import set_reproducibility
 
 # Constants
-MVP_DATA_LIMIT = 5000
+MVP_DATA_LIMIT = 10000
 RANDOM_SEED = 42
 
 set_reproducibility(RANDOM_SEED)
