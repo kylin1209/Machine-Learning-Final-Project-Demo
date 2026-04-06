@@ -8,9 +8,9 @@ from sklearn.neighbors import NearestNeighbors
 from data import load_and_clean_data
 from embed import load_embedding_model, combine_text_fields, generate_embeddings
 from retrieval import rank_games_for_query, get_similar_games, batch_cosine_similarity
+from utils import set_reproducibility
 from viz import perform_pca_projection, plot_2d_map, plot_price_distribution, plot_top_genres
 from clustering import perform_kmeans_clustering
-from utils import set_reproducibility
 
 # Constants
 MVP_DATA_LIMIT = 10000
@@ -114,7 +114,7 @@ with st.spinner("Initializing Vector Space & Clusters..."):
     dataset_vectors = get_cached_embeddings(combined_texts)
     # Phase 5 & 6 Math Prep
     pca_projection = perform_pca_projection(dataset_vectors)
-    clusters = perform_kmeans_clustering(dataset_vectors, n_clusters=8, seed=RANDOM_SEED)
+    clusters = perform_kmeans_clustering(dataset_vectors, n_clusters=8)
     
     # Attach to a working df
     df = df_raw.copy()
@@ -140,12 +140,19 @@ for g_list in df['genres'].str.split(','):
         
 selected_genres = st.sidebar.multiselect("Require Genres:", sorted(list(all_genres)))
 
+def normalize_genre_tokens(genre_text):
+    if genre_text is None:
+        return set()
+    return {token.strip().lower() for token in str(genre_text).split(',') if token.strip()}
+
 # Apply filters
 mask = (df['price'] >= min_price) & (df['price'] <= max_price)
 if selected_genres:
-    # Game must contain at least one of the selected genres
-    # To require ALL, use all(g in x for g in selected_genres)
-    genre_mask = df['genres'].apply(lambda x: any(g in str(x) for g in selected_genres))
+    # Game must contain at least one exact selected genre token
+    selected_genres_normalized = {genre.strip().lower() for genre in selected_genres}
+    genre_mask = df['genres'].apply(
+        lambda value: bool(normalize_genre_tokens(value).intersection(selected_genres_normalized))
+    )
     mask = mask & genre_mask
 
 filtered_df = df[mask].copy()
