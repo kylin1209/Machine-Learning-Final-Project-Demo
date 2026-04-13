@@ -94,3 +94,58 @@ def get_similar_games(target_idx, dataset_vectors, df, top_k=5):
     
     return results
 
+def evaluate_retrieval_mrr(model, dataset_vectors, df, sample_size=50, top_k=5):
+    """
+    Evaluates the retrieval model using Known-Item Search.
+    Randomly samples games, uses their description as a query, and checks
+    how well the model ranks the original game.
+    """
+    if len(df) < sample_size:
+        sample_size = len(df)
+        
+    # Randomly sample games
+    sample_df = df.sample(n=sample_size, random_state=42)
+    
+    queries = sample_df['short_description'].tolist()
+    target_indices = sample_df.index.tolist()
+    
+    # Batch encode all queries for performance
+    query_vectors = model.encode(queries, convert_to_numpy=True)
+    
+    reciprocal_ranks = []
+    hits_at_1 = 0
+    hits_at_5 = 0
+    
+    # For each query, see where the target game ranks
+    for i, target_idx in enumerate(target_indices):
+        q_vec = query_vectors[i]
+        
+        # calculate similarities
+        similarities = batch_cosine_similarity(q_vec, dataset_vectors)
+        
+        # rank all items
+        ranked_dataset_indices = np.argsort(similarities)[::-1]
+        
+        # Find the rank of our target game
+        # Note: df.index maps directly to dataset_vectors index in our setup
+        df_index_pos = df.index.get_loc(target_idx)
+        
+        # np.where returns a tuple of arrays, [0][0] gets the integer index
+        rank = np.where(ranked_dataset_indices == df_index_pos)[0][0] + 1 
+        
+        reciprocal_ranks.append(1.0 / rank)
+        if rank == 1:
+            hits_at_1 += 1
+        if rank <= top_k:
+            hits_at_5 += 1
+            
+    mrr = np.mean(reciprocal_ranks)
+    recall_at_1 = hits_at_1 / sample_size
+    recall_at_5 = hits_at_5 / sample_size
+    
+    return {
+        "mrr": mrr,
+        "recall_at_1": recall_at_1,
+        "recall_at_5": recall_at_5,
+        "sample_size": sample_size
+    }
