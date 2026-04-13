@@ -40,40 +40,93 @@ def plot_2d_map(df, projection, color_col='genres_primary'):
         title="2D Semantic Mapping of Steam Games (PCA)",
         opacity=0.7,
         template="plotly_dark",
-        color_discrete_sequence=px.colors.qualitative.Light24
+        color_discrete_sequence=px.colors.qualitative.Light24,
+        category_orders={color_col: sorted(plot_df[color_col].astype(str).unique())}
     )
-    fig.update_layout(height=600)
+    fig.update_layout(
+        height=600,
+        paper_bgcolor='rgba(0,0,0,0)',
+        plot_bgcolor='rgba(0,0,0,0)',
+        font_color='#c6d4df',
+        title_font_color='#ffffff'
+    )
+    return fig
+
+def plot_price_pie(df):
+    """Plots a pie chart of Free vs Paid games."""
+    free_count = (df['price'] == 0).sum()
+    paid_count = (df['price'] > 0).sum()
+    
+    fig = px.pie(
+        names=["Free to Play ($0)", "Paid"],
+        values=[free_count, paid_count],
+        title="Free vs Paid Proportion",
+        template="plotly_dark",
+        color_discrete_sequence=['#2ca02c', '#1f77b4']
+    )
+    fig.update_traces(textposition='inside', textinfo='percent+label')
+    # Make pie chart visually match heights of other charts
+    fig.update_layout(
+        height=450,
+        paper_bgcolor='rgba(0,0,0,0)',
+        plot_bgcolor='rgba(0,0,0,0)',
+        font_color='#c6d4df',
+        title_font_color='#ffffff'
+    )
     return fig
 
 def plot_price_distribution(df):
-    """Plots a histogram of game prices."""
-    # Filter out extreme outliers for a readable distribution
-    plot_df = df[df['price'] <= 100].copy()
+    """Plots a histogram of purely paid game prices."""
+    # Filter out extreme outliers and Free games
+    plot_df = df[(df['price'] > 0) & (df['price'] <= 100)].copy()
     fig = px.histogram(
         plot_df, 
         x='price', 
-        nbins=50,
-        title="Price Distribution (<= $100)",
+        nbins=40,
+        title="Paid Price Distribution (<= $100)",
         labels={'price': 'Price ($)'},
         template="plotly_dark",
         color_discrete_sequence=['#1f77b4']
     )
+    fig.update_layout(
+        height=450,
+        paper_bgcolor='rgba(0,0,0,0)',
+        plot_bgcolor='rgba(0,0,0,0)',
+        font_color='#c6d4df',
+        title_font_color='#ffffff'
+    )
     return fig
 
 def plot_top_genres(df):
-    """Plots a bar chart of the most common genres."""
+    """Plots a horizontal bar chart of the most common genres."""
     # Explode the comma-separated genres
     genres = df['genres'].str.split(',').explode().str.strip()
     genres = genres[genres != '']
     top_genres = genres.value_counts().nlargest(15)
     
+    # Sort ascending so the largest value appears at the VERY TOP of the horizontal chart
+    top_genres = top_genres.sort_values(ascending=True)
+    
+    plot_df = pd.DataFrame({'Genre': top_genres.index, 'Count': top_genres.values})
+    
     fig = px.bar(
-        x=top_genres.index, 
-        y=top_genres.values,
+        plot_df, 
+        x='Count', 
+        y='Genre',
+        orientation='h',
         title="Top 15 Most Common Genres",
-        labels={'x': 'Genre', 'y': 'Number of Games'},
+        labels={'Count': 'Number of Games', 'Genre': ''},
         template="plotly_dark",
-        color_discrete_sequence=['#ff7f0e']
+        color='Count',
+        color_continuous_scale='Sunsetdark'
+    )
+    fig.update_layout(
+        height=500, 
+        coloraxis_showscale=False,
+        paper_bgcolor='rgba(0,0,0,0)',
+        plot_bgcolor='rgba(0,0,0,0)',
+        font_color='#c6d4df',
+        title_font_color='#ffffff'
     )
     return fig
 
