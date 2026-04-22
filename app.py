@@ -8,7 +8,7 @@ from input_handler import InputValidator
 # Import local modules
 from data import load_and_clean_data
 from embed import load_embedding_model, combine_text_fields, generate_embeddings
-from retrieval import rank_games_for_query, get_similar_games, batch_cosine_similarity, evaluate_retrieval_mrr
+from retrieval import rank_games_for_query, get_similar_games, batch_cosine_similarity, evaluate_retrieval_mrr, build_robust_query_vector
 from urllib.parse import urlparse
 from sklearn.preprocessing import LabelEncoder
 from utils import set_reproducibility
@@ -266,7 +266,7 @@ with tab1:
                 latency = time.time() - start_time
                 st.success(f"✅ Custom Algorithm Latency: {latency:.4f} seconds | Found {len(results)} matches")
             else:
-                q_vec = model.encode([cleaned_query], convert_to_numpy=True)[0]
+                q_vec = build_robust_query_vector(model, cleaned_query)
                 if dealbreakers:
                     n_vec = model.encode([dealbreakers], convert_to_numpy=True)[0]
                     q_vec = q_vec - (0.5 * n_vec)

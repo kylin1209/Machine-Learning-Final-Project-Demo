@@ -1,4 +1,75 @@
 import numpy as np
+import re
+
+
+QUERY_EXPANSIONS = {
+    'relaxing': ['cozy', 'calm', 'laid-back', 'low-stress', 'casual'],
+    'fun': ['enjoyable', 'engaging', 'entertaining', 'addictive'],
+    'good': ['well-reviewed', 'popular', 'polished', 'solid'],
+    'bad': ['frustrating', 'rough', 'unfair', 'clunky'],
+    'story': ['narrative', 'plot-driven', 'dialogue-rich', 'cinematic'],
+    'multiplayer': ['co-op', 'online', 'friends', 'social'],
+    'single player': ['single-player', 'solo', 'story mode'],
+    'co-op': ['multiplayer', 'team-based', 'friends'],
+    'horror': ['scary', 'tense', 'survival', 'suspenseful'],
+    'puzzle': ['logic', 'brain-teaser', 'thinking', 'problem-solving'],
+    'strategy': ['tactical', 'management', 'planning', 'turn-based'],
+    'action': ['fast-paced', 'combat', 'intense', 'adrenaline'],
+    'rpg': ['role-playing', 'character progression', 'quests', 'builds'],
+    'farming': ['cozy', 'life sim', 'crafting', 'management'],
+    'casual': ['accessible', 'easy-going', 'simple', 'pick-up-and-play'],
+    'open world': ['exploration', 'sandbox', 'adventure', 'free roam'],
+}
+
+
+def build_robust_query_vector(model, query_string):
+    """
+    Builds a query vector by blending the raw query with a few lightweight
+    semantic expansions so vague input still retrieves sensible matches.
+    """
+    query = str(query_string).strip()
+    if not query:
+        return model.encode([query], convert_to_numpy=True)[0]
+
+    lower_query = query.lower()
+    variants = [query]
+
+    # Generic prompt-style variants help when the input is short or underspecified.
+    variants.extend([
+        f"A video game about {query}",
+        f"A game with {query}",
+        f"A game that feels {query}",
+    ])
+
+    # Add a few targeted expansions when the query contains broad concepts.
+    for term, synonyms in QUERY_EXPANSIONS.items():
+        if term in lower_query:
+            variants.append(f"{query}, {' '.join(synonyms)}")
+            variants.append(f"{', '.join(synonyms)} game")
+
+    # If the query is very short, broaden it a bit more.
+    content_words = re.findall(r"\b[a-zA-Z]{3,}\b", lower_query)
+    if len(content_words) <= 2:
+        variants.extend([
+            "popular well-reviewed video game",
+            "engaging game with broad appeal",
+        ])
+
+    # Deduplicate while preserving order.
+    seen = set()
+    unique_variants = []
+    for variant in variants:
+        normalized = variant.strip().lower()
+        if normalized and normalized not in seen:
+            seen.add(normalized)
+            unique_variants.append(variant)
+
+    query_vectors = model.encode(unique_variants, convert_to_numpy=True)
+    weights = np.ones(len(unique_variants), dtype=np.float32)
+    weights[0] = 2.0  # keep the user's exact words dominant
+    q_vec = np.average(query_vectors, axis=0, weights=weights)
+
+    return q_vec
 
 def normalize_vectors(vectors):
     """
@@ -53,10 +124,10 @@ def rank_games_for_query(query_string, negative_query_string, model, dataset_vec
     Returns:
         pd.DataFrame: Top matching games containing their data and 'similarity_score'.
     """
-    # 1. Embed positive query
-    q_vec = model.encode([query_string], convert_to_numpy=True)[0]
+    # 1. Embed query with lightweight semantic expansion for vague input
+    q_vec = build_robust_query_vector(model, query_string)
     
-    # 2. Vector Math for dealbreakers: Q_combined = Q_pos - alpha * Q_neg
+    # 2. Scale dealbreakers consistently with the custom alpha setting
     if negative_query_string:
         neg_vec = model.encode([negative_query_string], convert_to_numpy=True)[0]
         q_vec = q_vec - (alpha * neg_vec)

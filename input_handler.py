@@ -77,14 +77,14 @@ class InputValidator:
         suggestions = []
         
         if vagueness > 0.5:
-            suggestions.append("💡 Tip: Be more specific! Try mentioning:")
+            suggestions.append("💡 Tip: I can broaden vague searches automatically, but more detail helps. Try mentioning:")
             suggestions.append("  • **Genre**: Action, RPG, Puzzle, Strategy, etc.")
             suggestions.append("  • **Tone**: Relaxing, intense, competitive, story-driven")
             suggestions.append("  • **Setting**: Fantasy, Sci-Fi, Modern, Horror")
             suggestions.append("  • **Features**: Multiplayer, Single-player, Co-op")
             return "\n".join(suggestions)
         
-        return "💡 Tip: Adding more specific details helps find better matches!"
+        return "💡 Tip: Adding more specific details helps, but I’ll still try to broaden the search if your input is vague."
     
     @staticmethod
     def suggest_query_examples() -> list:
