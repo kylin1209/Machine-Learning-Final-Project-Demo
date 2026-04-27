@@ -1,16 +1,18 @@
-# A Semantic Vector-Based Approach to Steam Game Discovery
+# Steam Game Discovery: Ultimate Hybrid NLP Architecture
 
-A Streamlit web application to discover Steam games through natural text search, dealbreakers, and vector similarity mapping. This application utilizes a from-scratch cosine similarity retrieval algorithm to match plain-English queries with games embedded using Sentence-Transformers, while also including robust filtering, caching, and evaluation workflows.
+A Streamlit web application to discover Steam games through natural text search, dealbreakers, and advanced three-stage vector mapping. This application utilizes an industry-grade **Hybrid Retrieval Architecture**. It merges dense semantic vectors (`Sentence-Transformers`) with sparse keyword matrices (`TF-IDF`), unifies them mathematically using **Reciprocal Rank Fusion (RRF)**, and achieves optimal human-like precision by reranking candidates through a deep learning **Cross-Encoder**. It also includes robust UI filtering, global cache pre-loading, and zero-latency quantitative evaluation workflows.
 
-## Features
+## Data Source & Acknowledgements
+This project builds its semantic corpus upon the public **`FronkonGames/steam-games-dataset`** hosted natively on Hugging Face. The application automatically downloads, filters, and curates a robust catalog of over 10,000+ top-rated indie and mainstream games from this repository to power the discovery engine.
+
+## Core Features
 1. **Natural Language Search**: Describe what you want to play ("A relaxing farming simulator with multiplayer").
-2. **Dealbreakers**: Specify elements you do not want ("no microtransactions", "not turn-based").
-3. **Algorithm Comparison**: Test our manual implementation of cosine similarity against the standard `sklearn` performance.
-4. **Similar Games**: Find games semantically close to your favorites.
-5. **Cross-Genre "Surprise Me"**: Combine wildly different genres to find games living in the midpoint vector space.
-6. **Visual Map**: Interactive scatterplot visualizing games grouped by genre and mathematical similarity.
-7. **Robust Filtering Pipeline**: Apply price, genre, category, year, Metacritic, and free-only filters before ranking.
-8. **Evaluation & Metrics**: Measure clustering quality and retrieval performance directly in-app.
+2. **Ultimate Hybrid Retrieval (Three-Stage Pipeline)**: Combines pure 'vibe' text embeddings (Bi-Encoders) with precise keyword tracking (TF-IDF Matrices) via RRF math. The top 60 broad candidates are then definitively sorted by a sequence-classifying Cross-Encoder.
+3. **Dealbreakers (Negative Vectors)**: Specify elements you do not want ("no microtransactions"). The engine maps these to geometry and subtracts them from your search query.
+4. **Custom K-Means++ Clustering Engine**: Segmented the game library grouped natively via NumPy to build mathematical Discovery Maps without `sklearn` black-box wrappers.
+5. **Similar Game Mapping**: Bypass rerankers to analyze pure Geometric Cosine Distances and find titles perfectly sharing multidimensional mechanics.
+6. **Cross-Genre "Surprise Me"**: Combine wildly different concepts (e.g. "cute animal crossing" + "violent shooter") to triangulate specific midpoint vector games.
+7. **Pre-Loaded Zero-Latency Evaluation**: Quantitative validation metrics (MRR, Recall@k, WCSS, Silhouette) are rigorously computed on full neural-networks precisely during initialization, exposing instantaneous testing scores without lagging the frontend.
 
 ## Directory Structure
 - `app.py`: Streamlit entry point.
