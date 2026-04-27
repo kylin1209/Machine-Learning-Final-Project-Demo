@@ -182,8 +182,15 @@ def rank_games_for_query(query_string, negative_query_string, model, dataset_vec
             doc_text = f"{row.get('name', '')}: {row.get('short_description', '')}"
             pairs.append([str(query_string), str(doc_text)])
         
-        ce_scores = cross_encoder.predict(pairs)
+        # Cross_encoder outputs raw logits (can be 5.0, -10.0, etc.)
+        raw_logits = cross_encoder.predict(pairs)
+        
+        # Apply Sigmoid function to normalize mathematically to continuous [0.0, 1.0] probability
+        ce_scores = 1 / (1 + np.exp(-raw_logits))
+        
+        # Overwrite the similarity score so the UI naturally picks up the final stage precision
         results['cross_encoder_score'] = ce_scores
+        results['similarity_score'] = ce_scores
         results = results.sort_values(by='cross_encoder_score', ascending=False).head(top_k)
     
     return results
