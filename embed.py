@@ -1,6 +1,7 @@
 import pandas as pd
 import numpy as np
 from sentence_transformers import SentenceTransformer, CrossEncoder
+from sklearn.feature_extraction.text import TfidfVectorizer
 import streamlit as st
 import os
 
@@ -18,6 +19,17 @@ def load_cross_encoder_model(model_name='cross-encoder/ms-marco-MiniLM-L-6-v2'):
     Loads and caches the CrossEncoder model for precision NLP reranking.
     """
     return CrossEncoder(model_name)
+
+@st.cache_resource
+def load_tfidf_model_and_matrix(text_list):
+    """
+    Initializes a Token-Frequency/Inverse-Document-Frequency Vectorizer 
+    and Sparse Matrix using the entire global text descriptions to learn 
+    baseline statistical keyword importance for Hybrid exact-keyword Retrieval.
+    """
+    vectorizer = TfidfVectorizer(stop_words='english', max_features=15000, lowercase=True)
+    matrix = vectorizer.fit_transform(text_list)
+    return vectorizer, matrix
 
 
 def combine_text_fields(df, field_weights=None):

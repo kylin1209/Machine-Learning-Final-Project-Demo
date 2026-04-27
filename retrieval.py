@@ -108,10 +108,10 @@ def batch_cosine_similarity(query_vector, dataset_vectors):
     # Dot product of 2D dataset with 1D query -> 1D array of similarities
     return np.dot(d_norm, q_norm)
 
-def rank_games_for_query(query_string, negative_query_string, model, dataset_vectors, df, top_k=10, alpha=0.5, cross_encoder=None):
+def rank_games_for_query(query_string, negative_query_string, model, dataset_vectors, df, top_k=10, alpha=0.5, cross_encoder=None, tfidf_vectorizer=None, tfidf_matrix=None, filtered_indices=None):
     """
     Ranks games based on a positive query, optionally shifting away from a negative query.
-    Optionally applies a Cross-Encoder to rerank the top candidate pool for maximum precision.
+    Implements a robust Three-Stage NLP Pipeline (Dense + Sparse/RRF + Cross-Encoder).
     
     Args:
         query_string (str): Primary search intent.
@@ -121,7 +121,10 @@ def rank_games_for_query(query_string, negative_query_string, model, dataset_vec
         df (pd.DataFrame): Dataset dataframe for returning results.
         top_k (int): Number of top matches to return.
         alpha (float): Weight for subtracting the negative vector.
-        cross_encoder (CrossEncoder): Optional cross-encoder model for stage-2 reranking.
+        cross_encoder (CrossEncoder): Optional cross-encoder model for precision reranking.
+        tfidf_vectorizer (TfidfVectorizer): Optional Sparse Vectorizer for keyword matching.
+        tfidf_matrix (sparse matrix): Optional Global Sparse dataset.
+        filtered_indices (list): List of real dataset row indices currently active via sidebar.
         
     Returns:
         pd.DataFrame: Top matching games containing their data and scores.
@@ -134,19 +137,45 @@ def rank_games_for_query(query_string, negative_query_string, model, dataset_vec
         neg_vec = model.encode([negative_query_string], convert_to_numpy=True)[0]
         q_vec = q_vec - (alpha * neg_vec)
         
-    # 3. Calculate similarities matching entirely from scratch
-    similarities = batch_cosine_similarity(q_vec, dataset_vectors)
+    # 3. Calculate Dense similarities (Semantic Vibe) matching entirely from scratch
+    dense_similarities = batch_cosine_similarity(q_vec, dataset_vectors)
     
-    # 4. Sort distances and return top_k index list
-    # Unpack np.argsort indexing descending. Fetch a larger pool if utilizing cross-encoder.
+    # 4. Determine base candidate pool sizes
     fetch_k = top_k * 3 if cross_encoder is not None else top_k
-    top_indices = np.argsort(similarities)[::-1][:fetch_k]
     
-    # 5. Prep output dataframe
-    results = df.iloc[top_indices].copy()
-    results['similarity_score'] = similarities[top_indices]
+    # 5. Hybrid Search & Reciprocal Rank Fusion (RRF) Logic (Stage 1)
+    if tfidf_vectorizer is not None and tfidf_matrix is not None and filtered_indices is not None and len(filtered_indices) > 0:
+        fetch_k = min(fetch_k, len(filtered_indices))
+        
+        # Calculate Dense Ranks
+        dense_sim_filtered = dense_similarities[filtered_indices]
+        dense_ranks = np.zeros_like(dense_sim_filtered, dtype=float)
+        dense_ranks[np.argsort(dense_sim_filtered)[::-1]] = np.arange(len(dense_sim_filtered))
+
+        # Calculate Sparse Scores & Ranks
+        sparse_query_vec = tfidf_vectorizer.transform([str(query_string)])
+        sparse_matrix_filtered = tfidf_matrix[filtered_indices]
+        sparse_similarities = sparse_query_vec.dot(sparse_matrix_filtered.T).toarray()[0]
+        
+        sparse_ranks = np.zeros_like(sparse_similarities, dtype=float)
+        sparse_ranks[np.argsort(sparse_similarities)[::-1]] = np.arange(len(sparse_similarities))
+
+        # RRF Math: Fuse both independent semantic/keyword signals perfectly safely
+        rrf_scores = (1.0 / (60.0 + dense_ranks)) + (1.0 / (60.0 + sparse_ranks))
+        
+        best_local_indices = np.argsort(rrf_scores)[::-1][:fetch_k]
+        top_indices = [filtered_indices[i] for i in best_local_indices]
+        
+        results = df.iloc[top_indices].copy()
+        results['similarity_score'] = rrf_scores[best_local_indices]
+        
+    else:
+        # Fallback to pure Dense ranking if no sparse objects passed
+        top_indices = np.argsort(dense_similarities)[::-1][:fetch_k]
+        results = df.iloc[top_indices].copy()
+        results['similarity_score'] = dense_similarities[top_indices]
     
-    # 6. Apply Cross-Encoder Reranking if enabled
+    # 6. Apply Cross-Encoder Reranking if enabled (Stage 2)
     if cross_encoder is not None:
         pairs = []
         for _, row in results.iterrows():
