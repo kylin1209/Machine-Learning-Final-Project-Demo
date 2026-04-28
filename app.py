@@ -95,6 +95,12 @@ li[role="option"]:hover, li[role="option"][aria-selected="true"] {
     color: #66c0f4 !important;
     border: 1px solid #1a44c2 !important;
 }
+
+/* Inline Code Highlights */
+code {
+    background-color: #2a475e !important;
+    color: #a6e22e !important;
+}
 </style>
 """
 st.markdown(STEAM_CSS, unsafe_allow_html=True)
