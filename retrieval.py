@@ -1,5 +1,6 @@
 import numpy as np
 import re
+import streamlit as st
 
 
 QUERY_EXPANSIONS = {
@@ -315,7 +316,12 @@ def evaluate_ultimate_pipeline(model, dataset_vectors, df, cross_encoder, tfidf_
     hits_at_5 = 0
     all_indices = df.index.tolist()
     
-    for target_idx in target_indices:
+    progress_bar = st.progress(0, text="Benchmarking Ultimate Architecture Quality...")
+    
+    for i, target_idx in enumerate(target_indices):
+        progress = min(i / sample_size, 1.0)
+        progress_bar.progress(progress, text=f"Benchmarking Ultimate Architecture Quality... ({i+1}/{sample_size})")
+        
         query_str = eval_df.loc[target_idx, query_field]
         eval_fetch_depth = 50 
         
@@ -346,6 +352,8 @@ def evaluate_ultimate_pipeline(model, dataset_vectors, df, cross_encoder, tfidf_
             hits_at_1 += 1
         if rank <= top_k:
             hits_at_5 += 1
+            
+    progress_bar.empty()
             
     return {
         "mrr": np.mean(reciprocal_ranks),

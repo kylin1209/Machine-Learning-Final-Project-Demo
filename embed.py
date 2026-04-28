@@ -63,7 +63,27 @@ def generate_embeddings(_model, text_list, show_progress_bar=True):
     """
     Generates embeddings with validation (handles NaN/inf).
     """
-    embeddings = _model.encode(text_list, show_progress_bar=show_progress_bar, convert_to_numpy=True)
+    if show_progress_bar:
+        batch_size = 32
+        embeddings_list = []
+        progress_bar = st.progress(0, text="Generating Embeddings...")
+        total_batches = (len(text_list) + batch_size - 1) // batch_size
+        
+        for i in range(0, len(text_list), batch_size):
+            batch_texts = text_list[i:i+batch_size]
+            # Encode batch without terminal progress bar
+            batch_embeddings = _model.encode(batch_texts, show_progress_bar=False, convert_to_numpy=True)
+            embeddings_list.append(batch_embeddings)
+            
+            # Update progress
+            progress = min((i + batch_size) / len(text_list), 1.0)
+            batch_num = (i // batch_size) + 1
+            progress_bar.progress(progress, text=f"Generating Embeddings... (Batch {batch_num}/{total_batches})")
+            
+        embeddings = np.vstack(embeddings_list)
+        progress_bar.empty()
+    else:
+        embeddings = _model.encode(text_list, show_progress_bar=False, convert_to_numpy=True)
     
     # Validate embeddings
     if np.any(np.isnan(embeddings)) or np.any(np.isinf(embeddings)):
