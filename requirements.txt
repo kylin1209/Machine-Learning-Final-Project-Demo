@@ -9,7 +9,7 @@ attrs==25.4.0
 bcrypt==4.0.1
 black==26.1.0
 blinker==1.9.0
-Box2D==2.3.10
+Box2D==2.3.2
 cachelib==0.13.0
 cachetools==6.2.4
 certifi==2025.10.5
